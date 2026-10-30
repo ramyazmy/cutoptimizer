@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f6e66">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>تقطيع الشيتات · CutOptimizer 2D</title>
+<style>
+:root {
+  --bg: #f4f6f3;
+  --card: #ffffff;
+  --card-border: #d8ded5;
+  --tx: #141c19;
+  --tx-mut: #5e6b66;
+  --pri: #0f6e66;
+  --pri-hover: #0b534d;
+  --pri-light: #e6f4f2;
+  --sec: #e76f51;
+  --err: #c5221f;
+  --err-bg: #fdf2f2;
+  --accent: #2a9d8f;
+  --radius: 10px;
+}
+[data-theme="dark"] {
+  --bg: #0f1413;
+  --card: #18201e;
+  --card-border: #283532;
+  --tx: #eaf0ed;
+  --tx-mut: #8e9e98;
+  --pri: #2da89d;
+  --pri-hover: #228b81;
+  --pri-light: #162b28;
+  --sec: #f4a261;
+  --err: #f28b82;
+  --err-bg: #2d1817;
+  --accent: #3fb5a9;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  line-height: 1.5;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+header {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--card);
+  border-bottom: 1px solid var(--card-border);
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; color: var(--pri); }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.btn-icon {
+  background: transparent; border: 1px solid var(--card-border); border-radius: 8px;
+  padding: 6px 10px; cursor: pointer; color: var(--tx); font-family: inherit; font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s;
+}
+.btn-icon:hover { background: var(--pri-light); border-color: var(--pri); color: var(--pri); }
+.main-layout {
+  max-width: 1200px; margin: 0 auto; padding: 18px 14px 60px;
+  display: grid; grid-template-columns: 1fr; gap: 18px;
+}
+@media (min-width: 900px) {
+  .main-layout { grid-template-columns: 460px 1fr; align-items: start; }
+}
+.card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.card h2 { font-size: 15px; font-weight: 800; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+label { display: block; font-size: 12px; font-weight: 600; color: var(--tx-mut); margin-bottom: 4px; }
+input[type=number], input[type=text], select {
+  width: 100%; font: inherit; font-size: 15px; padding: 8px 10px;
+  border: 1px solid var(--card-border); border-radius: 6px; background: var(--bg); color: var(--tx);
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+input:focus, select:focus { outline: 2px solid var(--pri); outline-offset: 1px; }
+.options-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border); flex-wrap: wrap; font-size: 13px;
+}
+.options-bar label { display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; color: var(--tx); }
+.btn-primary {
+  width: 100%; padding: 12px; font-size: 16px; font-weight: 800; border-radius: 8px;
+  background: var(--pri); color: #fff; border: 0; cursor: pointer; transition: background 0.15s; margin-bottom: 14px;
+}
+.btn-primary:hover { background: var(--pri-hover); }
+.btn-outline {
+  padding: 8px 12px; font-size: 13px; font-weight: 700; border-radius: 6px;
+  background: transparent; color: var(--pri); border: 1.5px dashed var(--pri); cursor: pointer; width: 100%; transition: all 0.15s;
+}
+.btn-outline:hover { background: var(--pri-light); }
+.cutlist-header, .cutlist-row {
+  display: grid; grid-template-columns: 1.2fr 48px 65px 65px 36px 36px; gap: 6px; align-items: center; margin-bottom: 6px;
+}
+.cutlist-header { font-size: 11px; font-weight: 700; color: var(--tx-mut); text-align: center; padding: 0 4px; }
+.cutlist-header span:first-child { text-align: start; }
+.cutlist-row input { font-size: 13px; padding: 6px 4px; }
+.cutlist-row .btn-del {
+  height: 32px; border: 1px solid var(--card-border); background: transparent; color: var(--err);
+  border-radius: 6px; font-size: 14px; cursor: pointer; transition: background 0.15s;
+}
+.cutlist-row .btn-del:hover { background: var(--err-bg); }
+.cutlist-row .btn-canRotate {
+  height: 32px; border: 1px solid var(--card-border); background: transparent; border-radius: 6px;
+  font-size: 12px; cursor: pointer; color: var(--tx-mut);
+}
+.cutlist-row .btn-canRotate.locked { color: #d97706; background: rgba(217, 119, 6, 0.1); border-color: #d97706; }
+.summary-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;
+}
+@media (min-width: 600px) { .summary-grid { grid-template-columns: repeat(4, 1fr); } }
+.metric-box {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 12px; text-align: center;
+}
+.metric-box b { display: block; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.metric-box span { font-size: 12px; color: var(--tx-mut); }
+.sheet-diagram-card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 14px; margin-bottom: 16px;
+}
+.sheet-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+}
+.sheet-header h3 { font-size: 15px; font-weight: 800; }
+.canvas-wrapper {
+  background: #f0f2ee; border: 1px solid var(--card-border); border-radius: 8px;
+  padding: 10px; overflow: auto; text-align: center; max-height: 600px;
+}
+canvas { max-width: 100%; height: auto; display: inline-block; box-shadow: 0 2px 6px rgba(0,0,0,0.06); cursor: crosshair; }
+.alert-box {
+  padding: 10px 14px; border-radius: 8px; background: var(--err-bg); color: var(--err);
+  font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none;
+}
+.presets-strip { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+.btn-preset {
+  background: var(--bg); border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 8px;
+  font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; color: var(--tx);
+}
+.btn-preset:hover { border-color: var(--pri); color: var(--pri); }
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  header, .left-col, .no-print { display: none !important; }
+  .main-layout { display: block !important; padding: 0 !important; }
+  .sheet-diagram-card { border: 1px solid #aaa !important; page-break-after: always; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+    <span id="titleTxt">تقطيع الشيتات · CutOptimizer</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" id="btnLang" type="button">English</button>
+    <button class="btn-icon" id="btnTheme" type="button">🌙</button>
+    <button class="btn-icon no-print" onclick="window.print()" type="button">🖨️ طباعة</button>
+  </div>
+</header>
+
+<main class="main-layout">
+  <div class="left-col">
+    <!-- مقاس اللوح الخام -->
+    <section class="card">
+      <h2>
+        <span id="lblSheetSpecs">مقاس الشيت (اللوح الخام)</span>
+        <select id="unitSel" style="width: auto; padding: 2px 6px; font-size: 12px;">
+          <option value="mm">مم (mm)</option>
+          <option value="cm">سم (cm)</option>
+          <option value="in">بوصة (in)</option>
+        </select>
+      </h2>
+
+      <div class="presets-strip">
+        <button class="btn-preset" type="button" onclick="setSheet(2440, 1220)">MDF 2440×1220</button>
+        <button class="btn-preset" type="button" onclick="setSheet(2800, 2070)">Euro 2800×2070</button>
+        <button class="btn-preset" type="button" onclick="setSheet(2000, 1000)">صاج 2000×1000</button>
+        <button class="btn-preset" type="button" onclick="setSheet(3000, 1500)">صاج 3000×1500</button>
+      </div>
+
+      <div class="form-grid">
+        <div><label id="lblW">الطول (L)</label><input id="sheetW" type="number" value="2440" min="1" step="any"></div>
+        <div><label id="lblH">العرض (W)</label><input id="sheetH" type="number" value="1220" min="1" step="any"></div>
+      </div>
+
+      <div class="form-grid">
+        <div><label id="lblKerf">سمك المنشار (سلاح القص)</label><input id="kerf" type="number" value="3.2" min="0" step="any"></div>
+        <div><label id="lblTrim">هوامش التنظيف (Trim)</label><input id="trim" type="number" value="5" min="0" step="any"></div>
+      </div>
+
+      <div class="options-bar">
+        <label><input id="rotGlobal" type="checkbox" checked> <span id="lblRot">السماح بتدوير القطع</span></label>
+      </div>
+    </section>
+
+    <!-- قائمة القطعيات المطلوبة -->
+    <section class="card">
+      <h2>
+        <span id="lblCutList">القطعيات المطلوبة</span>
+        <span style="font-size: 12px; color: var(--tx-mut);"><button type="button" onclick="loadSample('kitchen')" style="background:none; border:none; color:var(--pri); cursor:pointer; font-weight:700;">+ نموذج مطبخ</button></span>
+      </h2>
+
+      <div class="cutlist-header">
+        <span>الاسم</span><span>العدد</span><span>الطول</span><span>العرض</span><span>تدوير</span><span>حذف</span>
+      </div>
+
+      <div id="rowsContainer"></div>
+
+      <button class="btn-outline" id="btnAddRow" type="button" style="margin-top: 8px;">+ إضافة مقاس جديد</button>
+    </section>
+
+    <div id="errorBox" class="alert-box"></div>
+    <button class="btn-primary" id="btnRun" type="button">⚡ احسب وارسم الشيت</button>
+  </div>
+
+  <div class="right-col">
+    <!-- الإحصائيات -->
+    <div class="summary-grid" id="statsGrid" style="display: none;">
+      <div class="metric-box"><b id="statSheets">0</b><span id="lblStatSheets">عدد الشيتات</span></div>
+      <div class="metric-box"><b id="statYield" style="color: var(--pri);">0%</b><span id="lblStatYield">نسبة الاستغلال</span></div>
+      <div class="metric-box"><b id="statWaste" style="color: var(--sec);">0%</b><span id="lblStatWaste">نسبة الهدر</span></div>
+      <div class="metric-box"><b id="statCuts">0</b><span id="lblStatCuts">طول القص</span></div>
+    </div>
+
+    <!-- مخرجات الشيتات -->
+    <div id="sheetsOutput"></div>
+  </div>
+</main>
+
+<script>
+const PALETTE = ['#2a9d8f','#e76f51','#f4a261','#457b9d','#9b5de5','#00bbf9','#06d6a0','#ff006e','#118ab2'];
+let rows = [
+  { label: 'باب خزانة', qty: 4, l: 720, w: 450, canRotate: false },
+  { label: 'جوانب', qty: 2, l: 850, w: 560, canRotate: false },
+  { label: 'قاعدة وسقف', qty: 2, l: 900, w: 560, canRotate: true },
+  { label: 'أرفف داخلية', qty: 3, l: 864, w: 530, canRotate: true },
+  { label: 'درج أمامي', qty: 4, l: 446, w: 176, canRotate: true }
+];
+
+let isArabic = true, curUnit = "mm";
+const UF = { mm: 1, cm: 10, in: 25.4 };
+const fmt = v => +(+v).toFixed(2);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+// خوارزمية القص المستقيم (Guillotine): كل قصة من طرف لطرف، تنفع منشار الشيتات
+class Bin {
+  constructor(w, h, k, split) { this.w = w; this.h = h; this.k = k; this.split = split; this.free = [[0, 0, w, h]]; this.placed = []; this.cutLen = 0; }
+  find(pw, ph, canRot) {
+    let best = null;
+    const ori = [[pw, ph, false]];
+    if (canRot && pw !== ph) ori.push([ph, pw, true]);
+    this.free.forEach(([x, y, fw, fh], i) => {
+      for (const [a, b, rot] of ori) {
+        if (a <= fw + 1e-7 && b <= fh + 1e-7) {
+          const s1 = Math.min(fw - a, fh - b), s2 = Math.max(fw - a, fh - b);
+          if (!best || s1 < best.s1 - 1e-9 || (Math.abs(s1 - best.s1) < 1e-9 && s2 < best.s2)) best = { s1, s2, i, x, y, a, b, rot };
+        }
+      }
+    });
+    return best;
+  }
+  place(f, item) {
+    const { i, x, y, a, b, rot } = f;
+    const [, , fw, fh] = this.free[i];
+    this.placed.push({ x, y, w: a - this.k, h: b - this.k, label: item.label, color: item.color, rot, ol: item.l, ow: item.w });
+    this.free.splice(i, 1);
+    const rw = fw - a, rh = fh - b, E = 1e-6;
+    const horiz = this.split === 0 ? rw < rh : rw >= rh;
+    let r1, r2;
+    if (horiz) {
+      r1 = [x + a, y, rw, b]; r2 = [x, y + b, fw, rh];
+      if (rh > E) this.cutLen += fw; if (rw > E) this.cutLen += b;
+    } else {
+      r1 = [x + a, y, rw, fh]; r2 = [x, y + b, a, rh];
+      if (rw > E) this.cutLen += fh; if (rh > E) this.cutLen += a;
+    }
+    [r1, r2].forEach(r => { if (r[2] > E && r[3] > E) this.free.push(r); });
+  }
+}
+
+function pack(items, W, H, k, rot, split) {
+  const bins = [];
+  for (const it of items) {
+    const pw = it.l + k, ph = it.w + k, cr = rot && it.canRotate;
+    let done = false;
+    for (const b of bins) { const f = b.find(pw, ph, cr); if (f) { b.place(f, it); done = true; break; } }
+    if (!done) { const b = new Bin(W + k, H + k, k, split); const f = b.find(pw, ph, cr); if (f) { b.place(f, it); bins.push(b); } }
+  }
+  return bins;
+}
+
+function rng(a) { return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// الأقل في عدد الشيتات أولاً، ثم أكبر فراغ مجمّع في آخر شيت (بقايا نافعة)
+function score(bins) {
+  const last = bins[bins.length - 1];
+  return bins.length * 1e12 + (last ? last.placed.reduce((s, p) => s + p.w * p.h, 0) : 0);
+}
+
+function optimize(items, W, H, k, rot) {
+  const keys = [a => a.l * a.w, a => Math.max(a.l, a.w), a => a.l + a.w, a => a.l, a => a.w];
+  const rand = rng(12345);
+  let best = null, bs = Infinity;
+  const tryOrder = (arr, split) => { const bins = pack(arr, W, H, k, rot, split); const sc = score(bins); if (sc < bs) { bs = sc; best = bins; } };
+  for (const kf of keys) for (const sp of [0, 1]) tryOrder([...items].sort((a, b) => kf(b) - kf(a)), sp);
+  for (let n = 0; n < 200; n++) {
+    const kf = keys[n % keys.length];
+    const arr = items.map(it => ({ it, v: kf(it) * (1 + (rand() - 0.5) * 0.5) })).sort((a, b) => b.v - a.v).map(o => o.it);
+    tryOrder(arr, n % 2);
+  }
+  return best || [];
+}
+
+const EN = {'تقطيع الشيتات · CutOptimizer':'CutOptimizer 2D','مقاس الشيت (اللوح الخام)':'Stock Sheet Dimensions','الطول (L)':'Length (L)','العرض (W)':'Width (W)','سمك المنشار (سلاح القص)':'Blade Kerf','هوامش التنظيف (Trim)':'Trim Margin','السماح بتدوير القطع':'Allow Piece Rotation','القطعيات المطلوبة':'Cut List','+ إضافة مقاس جديد':'+ Add Part','⚡ احسب وارسم الشيت':'⚡ Calculate & Nest','مم (mm)':'mm','سم (cm)':'cm','بوصة (in)':'inch','صاج 2000×1000':'Metal 2000×1000','صاج 3000×1500':'Metal 3000×1500','الاسم':'Name','العدد':'Qty','الطول':'Length','العرض':'Width','تدوير':'Rotate','حذف':'Del','🖨️ طباعة':'🖨️ Print','+ نموذج مطبخ':'+ Kitchen sample','عدد الشيتات':'Sheets','نسبة الاستغلال':'Yield','نسبة الهدر':'Waste','طول القص':'Cut length'};
+function applyLang() {
+  document.querySelectorAll("body *").forEach(el => {
+    if (el.children.length) return;
+    const t = el.dataset.ar || el.textContent.trim();
+    if (EN[t]) { el.dataset.ar = t; el.textContent = isArabic ? t : EN[t]; }
+  });
+}
+
+function drawSheetCanvas(bin, W, H, trim, k, unit) {
+  const S = Math.min(850 / W, 500 / H);
+  const pad = 24;
+  const cv = document.createElement("canvas");
+  const dw = Math.round(W * S) + pad * 2;
+  const dh = Math.round(H * S) + pad * 2;
+  const dpr = window.devicePixelRatio || 1;
+
+  cv.width = dw * dpr; cv.height = dh * dpr;
+  cv.style.width = dw + "px"; cv.style.height = dh + "px";
+
+  const c = cv.getContext("2d");
+  c.scale(dpr, dpr);
+
+  // خلفية الشيت
+  c.fillStyle = "#ffffff"; c.fillRect(0, 0, dw, dh);
+  c.fillStyle = "#ebedea"; c.fillRect(pad, pad, W * S, H * S);
+
+  c.save(); c.beginPath(); c.rect(pad, pad, W * S, H * S); c.clip();
+  c.strokeStyle = "#d4d8d2"; c.lineWidth = 1;
+  for (let d = -H * S; d < W * S; d += 15) {
+    c.beginPath(); c.moveTo(pad + d, pad + H * S); c.lineTo(pad + d + H * S, pad); c.stroke();
+  }
+  c.restore();
+
+  if (trim > 0) {
+    c.strokeStyle = "#e11d48"; c.lineWidth = 1; c.setLineDash([3, 3]);
+    c.strokeRect(pad + trim * S, pad + trim * S, (W - trim * 2) * S, (H - trim * 2) * S);
+    c.setLineDash([]);
+  }
+
+  let usedArea = 0;
+  bin.placed.forEach((p) => {
+    const px = pad + (p.x + trim) * S;
+    const py = pad + (p.y + trim) * S;
+    const pw = p.w * S;
+    const ph = p.h * S;
+    usedArea += p.w * p.h;
+
+    c.fillStyle = p.color; c.fillRect(px, py, pw, ph);
+    c.strokeStyle = "#1b2521"; c.lineWidth = 1.2; c.strokeRect(px, py, pw, ph);
+
+    const dim = `${p.ol}×${p.ow}` + (p.rot ? " ↻" : "");
+    const tall = ph > pw * 1.35;
+    const fs = Math.min(16, (tall ? ph : pw) / (dim.length * 0.65), (tall ? pw : ph) * 0.4);
+
+    if (fs >= 7) {
+      c.save(); c.translate(px + pw / 2, py + ph / 2);
+      if (tall) c.rotate(-Math.PI / 2);
+      c.fillStyle = "#111"; c.textAlign = "center"; c.textBaseline = "middle";
+
+      if (p.label && fs >= 9 && (tall ? pw : ph) >= 25) {
+        c.font = `700 ${fs * 0.8}px system-ui, sans-serif`;
+        c.fillText(p.label, 0, -fs * 0.55);
+        c.font = `600 ${fs * 0.75}px monospace`;
+        c.fillText(dim, 0, fs * 0.55);
+      } else {
+        c.font = `700 ${fs}px monospace`;
+        c.fillText(dim, 0, 0);
+      }
+      c.restore();
+    }
+  });
+
+  c.strokeStyle = "#111"; c.lineWidth = 2.5; c.strokeRect(pad, pad, W * S, H * S);
+  c.fillStyle = "#4b5563"; c.font = "600 11px system-ui, sans-serif"; c.textAlign = "center";
+  c.fillText(`${W} ${unit}`, pad + (W * S) / 2, pad - 6);
+
+  return { cv, usedArea };
+}
+
+function renderRows() {
+  const container = document.getElementById("rowsContainer");
+  container.innerHTML = "";
+  rows.forEach((r, idx) => {
+    const el = document.createElement("div");
+    el.className = "cutlist-row";
+    el.innerHTML = `
+      <input type="text" value="${esc(r.label)}" placeholder="${isArabic?'الاسم':'Name'}" oninput="rows[${idx}].label=this.value">
+      <input type="number" value="${r.qty}" min="1" oninput="rows[${idx}].qty=Math.max(1,parseInt(this.value)||1)">
+      <input type="number" value="${r.l}" min="1" step="any" oninput="rows[${idx}].l=parseFloat(this.value)||0">
+      <input type="number" value="${r.w}" min="1" step="any" oninput="rows[${idx}].w=parseFloat(this.value)||0">
+      <button class="btn-canRotate ${r.canRotate?'':'locked'}" type="button" title="${r.canRotate?(isArabic?'تدوير حر':'Free rotate'):(isArabic?'ثابت الاتجاه':'Fixed')}" onclick="rows[${idx}].canRotate=!rows[${idx}].canRotate;renderRows()">${r.canRotate?'🔄':'🔒'}</button>
+      <button class="btn-del" type="button" onclick="deleteRow(${idx})">✕</button>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function addRow() {
+  rows.push({ label: `${isArabic ? "قطعة" : "Part"} ${rows.length + 1}`, qty: 1, l: 0, w: 0, canRotate: true });
+  renderRows();
+}
+
+function deleteRow(idx) {
+  if (rows.length > 1) rows.splice(idx, 1);
+  else rows = [{ label: 'قطعة 1', qty: 1, l: 0, w: 0, canRotate: true }];
+  renderRows();
+}
+
+function setSheet(w, h) {
+  document.getElementById("sheetW").value = fmt(w / UF[curUnit]);
+  document.getElementById("sheetH").value = fmt(h / UF[curUnit]);
+}
+
+function loadSample(type) {
+  if (type === 'kitchen') {
+    setSheet(2440, 1220);
+    rows = [
+      { label: 'باب خزانة', qty: 4, l: 720, w: 450, canRotate: false },
+      { label: 'جوانب', qty: 2, l: 850, w: 560, canRotate: false },
+      { label: 'قاعدة وسقف', qty: 2, l: 900, w: 560, canRotate: true },
+      { label: 'أرفف داخلية', qty: 3, l: 864, w: 530, canRotate: true },
+      { label: 'درج أمامي', qty: 4, l: 446, w: 176, canRotate: true }
+    ];
+    rows.forEach(r => { r.l = fmt(r.l / UF[curUnit]); r.w = fmt(r.w / UF[curUnit]); });
+    renderRows();
+    calculate();
+  }
+}
+
+function calculate() {
+  const err = document.getElementById("errorBox");
+  err.style.display = "none";
+  const num = id => parseFloat(document.getElementById(id).value) || 0;
+
+  const W = num("sheetW"), H = num("sheetH"), k = num("kerf"), trim = num("trim");
+  const allowRot = document.getElementById("rotGlobal").checked;
+  const unit = document.getElementById("unitSel").value;
+
+  if (W <= 0 || H <= 0) {
+    err.textContent = isArabic ? "يرجى كتابة مقاسات اللوح الخام." : "Enter sheet dimensions.";
+    err.style.display = "block"; return;
+  }
+
+  const usableW = Math.max(0, W - trim * 2);
+  const usableH = Math.max(0, H - trim * 2);
+
+  const flatItems = [], tooBig = [];
+  rows.forEach((r, idx) => {
+    if (r.l > 0 && r.w > 0 && r.qty > 0) {
+      const color = PALETTE[idx % PALETTE.length];
+      const fitsNormal = r.l <= usableW && r.w <= usableH;
+      const fitsRot = allowRot && r.canRotate && r.w <= usableW && r.l <= usableH;
+
+      if (!fitsNormal && !fitsRot) {
+        tooBig.push(r.label); return;
+      }
+
+      for (let i = 0; i < r.qty; i++) {
+        flatItems.push({ label: r.label, l: r.l, w: r.w, canRotate: r.canRotate, color });
+      }
+    }
+  });
+
+  if (tooBig.length) {
+    err.textContent = (isArabic ? "قطع أكبر من اللوح المتاح (تم تجاهلها): " : "Parts exceed usable area (ignored): ") + tooBig.join(", ");
+    err.style.display = "block";
+  }
+  if (!flatItems.length) {
+    err.textContent = isArabic ? "أضف قطعة واحدة على الأقل بأبعاد صحيحة." : "Add at least one part.";
+    err.style.display = "block"; return;
+  }
+
+  const bins = optimize(flatItems, usableW, usableH, k, allowRot);
+  const out = document.getElementById("sheetsOutput");
+  out.innerHTML = "";
+
+  let totalUsed = 0;
+  let totalCutLen = 0;
+
+  bins.forEach((b, i) => {
+    const card = document.createElement("div");
+    card.className = "sheet-diagram-card";
+
+    const { cv, usedArea } = drawSheetCanvas(b, W, H, trim, k, unit);
+    totalUsed += usedArea;
+
+    let sheetCutLen = 0;
+    sheetCutLen = b.cutLen;
+    totalCutLen += sheetCutLen;
+
+    const yieldPct = ((usedArea / (W * H)) * 100).toFixed(1);
+
+    card.innerHTML = `
+      <div class="sheet-header">
+        <h3>${isArabic ? 'شيت' : 'Sheet'} ${i + 1} ${isArabic ? 'من' : 'of'} ${bins.length} — ${isArabic ? 'استغلال' : 'Yield'}: ${yieldPct}%</h3>
+        <button class="btn-icon no-print" onclick="downloadCanvas(this)">💾 ${isArabic ? 'حفظ الصورة' : 'Save Image'}</button>
+      </div>
+      <div class="canvas-wrapper"></div>
+    `;
+    card.querySelector(".canvas-wrapper").appendChild(cv);
+    out.appendChild(card);
+  });
+
+  document.getElementById("statsGrid").style.display = "grid";
+  document.getElementById("statSheets").textContent = bins.length;
+  const overallYield = bins.length > 0 ? (totalUsed / (bins.length * W * H)) * 100 : 0;
+  document.getElementById("statYield").textContent = overallYield.toFixed(1) + "%";
+  document.getElementById("statWaste").textContent = (100 - overallYield).toFixed(1) + "%";
+
+  const cutMeters = unit === 'mm' ? (totalCutLen / 1000).toFixed(1) : unit === 'cm' ? (totalCutLen / 100).toFixed(1) : (totalCutLen * 0.0254).toFixed(1);
+  document.getElementById("statCuts").textContent = cutMeters + (isArabic ? ' م' : ' m');
+}
+
+function downloadCanvas(btn) {
+  const cv = btn.closest(".sheet-diagram-card").querySelector("canvas");
+  const a = document.createElement("a");
+  a.href = cv.toDataURL("image/png");
+  a.download = `sheet-cutting-layout.png`;
+  a.click();
+}
+
+document.getElementById("btnLang").onclick = () => {
+  isArabic = !isArabic;
+  document.documentElement.dir = isArabic ? "rtl" : "ltr";
+  document.documentElement.lang = isArabic ? "ar" : "en";
+  document.getElementById("btnLang").textContent = isArabic ? "English" : "العربية";
+  applyLang(); renderRows(); calculate();
+};
+
+document.getElementById("btnTheme").onclick = () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  document.documentElement.setAttribute("data-theme", isDark ? "light" : "dark");
+  document.getElementById("btnTheme").textContent = isDark ? "🌙" : "☀️";
+};
+
+document.getElementById("btnAddRow").onclick = addRow;
+document.getElementById("btnRun").onclick = calculate;
+
+document.getElementById("unitSel").onchange = function () {
+  const f = UF[curUnit] / UF[this.value];
+  ["sheetW", "sheetH", "kerf", "trim"].forEach(id => { const e = document.getElementById(id); e.value = fmt((parseFloat(e.value) || 0) * f); });
+  rows.forEach(r => { r.l = fmt(r.l * f); r.w = fmt(r.w * f); });
+  curUnit = this.value;
+  renderRows(); calculate();
+};
+
+renderRows();
+calculate();
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+</script>
+</body>
+</html>
