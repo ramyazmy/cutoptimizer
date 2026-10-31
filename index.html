@@ -171,6 +171,16 @@ html{overflow-x:hidden}body{max-width:100%}
 .presets-strip{max-width:100%}
 .brand{min-width:0;font-size:16px}.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .header-actions{flex-shrink:0}
+.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+.msheet{background:var(--card);width:100%;max-width:520px;max-height:82vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+@media (min-width:900px){.modal{align-items:center}.msheet{border-radius:16px}}
+.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:16px;font-weight:800}
+.save-row{display:flex;gap:8px;margin-bottom:14px}.save-row input{flex:1;text-align:start}
+.btn-save{background:var(--pri);color:#fff;border:0;border-radius:8px;padding:0 16px;font:inherit;font-weight:800}
+.saved-item{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--card-border)}
+.si-info{flex:1;min-width:0}.si-info b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.si-info small{color:var(--tx-mut)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom));background:#222;color:#fff;padding:9px 16px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:200}
+.toast.show{opacity:1}
 @media print {
   body { background: #fff !important; color: #000 !important; }
   header, .left-col, .no-print { display: none !important; }
@@ -233,7 +243,7 @@ html{overflow-x:hidden}body{max-width:100%}
     <section class="card">
       <h2>
         <span id="lblCutList">القطعيات المطلوبة</span>
-        <span style="font-size: 12px; color: var(--tx-mut);"><button type="button" onclick="loadSample('kitchen')" style="background:none; border:none; color:var(--pri); cursor:pointer; font-weight:700;">+ نموذج مطبخ</button></span>
+        <button class="btn-icon" id="btnSaved" type="button">💾 المحفوظات</button>
       </h2>
 
       <div class="cutlist-header">
@@ -263,6 +273,14 @@ html{overflow-x:hidden}body{max-width:100%}
   </div>
 </main>
 
+<div id="saveModal" class="modal">
+  <div class="msheet">
+    <div class="mtop"><span>المحفوظات</span><button class="btn-icon" id="mClose" type="button">✕</button></div>
+    <div class="save-row"><input id="saveName" type="text" autocomplete="off" maxlength="60"><button class="btn-save" id="mSave" type="button">💾 حفظ</button></div>
+    <div id="savedList"></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
 <nav class="tabbar no-print">
   <button class="on" id="tabIn" type="button"><span class="ic">📝</span><span>المدخلات</span></button>
   <button id="tabOut" type="button"><span class="ic">📐</span><span>النتائج</span></button>
@@ -348,7 +366,7 @@ function optimize(items, W, H, k, rot) {
   return best || [];
 }
 
-const EN = {'تقطيع الشيتات · CutOptimizer':'CutOptimizer 2D','مقاس الشيت (اللوح الخام)':'Stock Sheet Dimensions','الطول (L)':'Length (L)','العرض (W)':'Width (W)','سمك المنشار (سلاح القص)':'Blade Kerf','هوامش التنظيف (Trim)':'Trim Margin','السماح بتدوير القطع':'Allow Piece Rotation','القطعيات المطلوبة':'Cut List','+ إضافة مقاس جديد':'+ Add Part','⚡ احسب وارسم الشيت':'⚡ Calculate & Nest','مم (mm)':'mm','سم (cm)':'cm','بوصة (in)':'inch','صاج 2000×1000':'Metal 2000×1000','صاج 3000×1500':'Metal 3000×1500','الاسم':'Name','العدد':'Qty','الطول':'Length','العرض':'Width','تدوير':'Rotate','حذف':'Del','🖨️ طباعة':'🖨️ Print','+ نموذج مطبخ':'+ Kitchen sample','عدد الشيتات':'Sheets','نسبة الاستغلال':'Yield','نسبة الهدر':'Waste','طول القص':'Cut length','المدخلات':'Input','النتائج':'Results','احسب':'Calculate','مسح الكل':'Clear all','🗑️ مسح الكل':'🗑️ Clear all','لا توجد نتائج بعد':'No results yet','أدخل مقاس الشيت والقطعيات وسيظهر الرسم هنا تلقائياً':'Enter the sheet size and parts to see the layout here'};
+const EN = {'تقطيع الشيتات · CutOptimizer':'CutOptimizer 2D','مقاس الشيت (اللوح الخام)':'Stock Sheet Dimensions','الطول (L)':'Length (L)','العرض (W)':'Width (W)','سمك المنشار (سلاح القص)':'Blade Kerf','هوامش التنظيف (Trim)':'Trim Margin','السماح بتدوير القطع':'Allow Piece Rotation','القطعيات المطلوبة':'Cut List','+ إضافة مقاس جديد':'+ Add Part','⚡ احسب وارسم الشيت':'⚡ Calculate & Nest','مم (mm)':'mm','سم (cm)':'cm','بوصة (in)':'inch','صاج 2000×1000':'Metal 2000×1000','صاج 3000×1500':'Metal 3000×1500','الاسم':'Name','العدد':'Qty','الطول':'Length','العرض':'Width','تدوير':'Rotate','حذف':'Del','🖨️ طباعة':'🖨️ Print','+ نموذج مطبخ':'+ Kitchen sample','عدد الشيتات':'Sheets','نسبة الاستغلال':'Yield','نسبة الهدر':'Waste','طول القص':'Cut length','المدخلات':'Input','النتائج':'Results','احسب':'Calculate','مسح الكل':'Clear all','🗑️ مسح الكل':'🗑️ Clear all','💾 المحفوظات':'💾 Saved','المحفوظات':'Saved lists','💾 حفظ':'💾 Save','لا توجد نتائج بعد':'No results yet','أدخل مقاس الشيت والقطعيات وسيظهر الرسم هنا تلقائياً':'Enter the sheet size and parts to see the layout here'};
 function applyLang() {
   document.querySelectorAll("body *").forEach(el => {
     if (el.children.length) return;
@@ -622,6 +640,7 @@ function resetAll() {
   ["sheetW", "sheetH", "kerf", "trim"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("rotGlobal").checked = true;
   document.getElementById("errorBox").style.display = "none";
+  document.getElementById("saveName").value = "";
   renderRows(); clearResults(); setTab("in");
 }
 document.addEventListener("input", e => { if (e.target.closest(".left-col")) autoCalc(); });
@@ -629,6 +648,61 @@ document.getElementById("btnClear").onclick = document.getElementById("tabClear"
 document.getElementById("tabRun").onclick = () => calculate(true);
 document.getElementById("tabIn").onclick = () => setTab("in");
 document.getElementById("tabOut").onclick = () => setTab("out");
+
+const SKEY = "cutopt.saved.v1";
+const getSaved = () => { try { return JSON.parse(localStorage.getItem(SKEY)) || []; } catch (e) { return []; } };
+const putSaved = a => { try { localStorage.setItem(SKEY, JSON.stringify(a)); return true; } catch (e) { return false; } };
+function toast(m) {
+  const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function renderSaved() {
+  const box = document.getElementById("savedList"), list = getSaved().sort((a, b) => b.ts - a.ts);
+  if (!list.length) { box.innerHTML = `<div class="empty-hint">${isArabic ? "لا توجد قطعيات محفوظة بعد" : "Nothing saved yet"}</div>`; return; }
+  box.innerHTML = "";
+  list.forEach(p => {
+    const el = document.createElement("div"); el.className = "saved-item";
+    el.innerHTML = `<div class="si-info"><b>${esc(p.name)}</b><small>${p.rows.length} ${isArabic ? "بند" : "items"} · ${new Date(p.ts).toLocaleDateString(isArabic ? "ar-EG" : "en-GB")}</small></div><button class="btn-icon" data-a="o" type="button">${isArabic ? "فتح" : "Open"}</button><button class="btn-icon" data-a="d" type="button" style="color:var(--err)">🗑️</button>`;
+    el.querySelector('[data-a="o"]').onclick = () => openSaved(p.id);
+    el.querySelector('[data-a="d"]').onclick = () => delSaved(p.id);
+    box.appendChild(el);
+  });
+}
+function showModal() {
+  document.getElementById("saveName").placeholder = isArabic ? "اسم القطعيات (مثال: مطبخ أحمد)" : "List name (e.g. Kitchen A)";
+  renderSaved(); document.getElementById("saveModal").style.display = "flex";
+}
+const hideModal = () => { document.getElementById("saveModal").style.display = "none"; };
+function saveCurrent() {
+  const name = document.getElementById("saveName").value.trim();
+  if (!name) return toast(isArabic ? "اكتب اسماً للحفظ" : "Enter a name");
+  if (!rows.some(r => r.l > 0 && r.w > 0)) return toast(isArabic ? "أضف قطعيات أولاً" : "Add parts first");
+  const g = id => document.getElementById(id).value;
+  const rec = { id: Date.now(), ts: Date.now(), name, unit: curUnit, W: g("sheetW"), H: g("sheetH"), kerf: g("kerf"), trim: g("trim"), rot: document.getElementById("rotGlobal").checked, rows: rows.map(r => ({ ...r })) };
+  const list = getSaved(), i = list.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+  if (i >= 0) { rec.id = list[i].id; list[i] = rec; } else list.push(rec);
+  if (!putSaved(list)) return toast(isArabic ? "تعذّر الحفظ" : "Could not save");
+  renderSaved(); toast(isArabic ? "تم الحفظ ✓" : "Saved ✓");
+}
+function openSaved(id) {
+  const p = getSaved().find(x => x.id === id); if (!p) return;
+  document.getElementById("unitSel").value = p.unit; curUnit = p.unit;
+  [["sheetW", "W"], ["sheetH", "H"], ["kerf", "kerf"], ["trim", "trim"]].forEach(([e, k]) => { document.getElementById(e).value = p[k]; });
+  document.getElementById("rotGlobal").checked = p.rot;
+  rows = p.rows.map(r => ({ ...r }));
+  document.getElementById("saveName").value = p.name;
+  renderRows(); hideModal(); calculate(false); setTab("in");
+  toast((isArabic ? "تم فتح: " : "Opened: ") + p.name);
+}
+function delSaved(id) {
+  if (!confirm(isArabic ? "حذف هذه القطعيات المحفوظة؟" : "Delete this saved list?")) return;
+  putSaved(getSaved().filter(p => p.id !== id)); renderSaved();
+}
+document.getElementById("btnSaved").onclick = showModal;
+document.getElementById("mClose").onclick = hideModal;
+document.getElementById("mSave").onclick = saveCurrent;
+document.getElementById("saveName").onkeydown = e => { if (e.key === "Enter") saveCurrent(); };
+document.getElementById("saveModal").onclick = e => { if (e.target.id === "saveModal") hideModal(); };
 
 renderRows(); clearResults(); setTab("in");
 if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{})); }
