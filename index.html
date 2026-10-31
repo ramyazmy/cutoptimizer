@@ -164,6 +164,13 @@ header{padding-top:calc(10px + env(safe-area-inset-top))}
 .tabbar .del{color:var(--err)}
 @media (max-width:899px){body[data-tab="in"] .right-col{display:none}body[data-tab="out"] .left-col{display:none}#btnRun,.desk{display:none!important}}
 @media (min-width:900px){.tabbar{display:none}body{padding-bottom:30px}}
+html{overflow-x:hidden}body{max-width:100%}
+.main-layout{grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.main-layout{grid-template-columns:460px minmax(0,1fr)}}
+.left-col,.right-col,.card{min-width:0}
+.presets-strip{max-width:100%}
+.brand{min-width:0;font-size:16px}.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-actions{flex-shrink:0}
 @media print {
   body { background: #fff !important; color: #000 !important; }
   header, .left-col, .no-print { display: none !important; }
