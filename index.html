@@ -146,6 +146,24 @@ canvas { max-width: 100%; height: auto; display: inline-block; box-shadow: 0 2px
   font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; color: var(--tx);
 }
 .btn-preset:hover { border-color: var(--pri); color: var(--pri); }
+html{-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{user-select:none;-webkit-user-select:none;overscroll-behavior:none;padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+input,select{user-select:text;-webkit-user-select:text}
+header{padding-top:calc(10px + env(safe-area-inset-top))}
+.cutlist-header,.cutlist-row{grid-template-columns:minmax(0,1.2fr) 46px 62px 62px 38px 38px}
+.cutlist-row input{font-size:15px;padding:9px 4px}
+.cutlist-row .btn-del,.cutlist-row .btn-canRotate{height:40px}
+.empty,.empty-hint{text-align:center;color:var(--tx-mut);padding:36px 16px;border:1px dashed var(--card-border);border-radius:var(--radius);font-weight:700}
+.empty b{display:block;font-size:38px;margin-bottom:6px}.empty small{font-weight:500}
+.empty-hint{padding:18px;font-size:13px;margin-bottom:6px}
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;gap:4px;align-items:stretch;background:var(--card);border-top:1px solid var(--card-border);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.tabbar button{flex:1;border:0;background:none;border-radius:12px;padding:6px 2px;font:inherit;font-size:11px;font-weight:700;color:var(--tx-mut);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabbar .ic{font-size:20px;line-height:1.1}
+.tabbar .on{color:var(--pri);background:var(--pri-light)}
+.tabbar .act{background:var(--pri);color:#fff}
+.tabbar .del{color:var(--err)}
+@media (max-width:899px){body[data-tab="in"] .right-col{display:none}body[data-tab="out"] .left-col{display:none}#btnRun,.desk{display:none!important}}
+@media (min-width:900px){.tabbar{display:none}body{padding-bottom:30px}}
 @media print {
   body { background: #fff !important; color: #000 !important; }
   header, .left-col, .no-print { display: none !important; }
@@ -164,7 +182,8 @@ canvas { max-width: 100%; height: auto; display: inline-block; box-shadow: 0 2px
   <div class="header-actions">
     <button class="btn-icon" id="btnLang" type="button">English</button>
     <button class="btn-icon" id="btnTheme" type="button">🌙</button>
-    <button class="btn-icon no-print" onclick="window.print()" type="button">🖨️ طباعة</button>
+    <button class="btn-icon no-print desk" id="btnClear" type="button">🗑️ مسح الكل</button>
+    <button class="btn-icon no-print desk" onclick="window.print()" type="button">🖨️ طباعة</button>
   </div>
 </header>
 
@@ -189,13 +208,13 @@ canvas { max-width: 100%; height: auto; display: inline-block; box-shadow: 0 2px
       </div>
 
       <div class="form-grid">
-        <div><label id="lblW">الطول (L)</label><input id="sheetW" type="number" value="2440" min="1" step="any"></div>
-        <div><label id="lblH">العرض (W)</label><input id="sheetH" type="number" value="1220" min="1" step="any"></div>
+        <div><label id="lblW">الطول (L)</label><input id="sheetW" type="number" autocomplete="off" placeholder="2440" min="1" step="any"></div>
+        <div><label id="lblH">العرض (W)</label><input id="sheetH" type="number" autocomplete="off" placeholder="1220" min="1" step="any"></div>
       </div>
 
       <div class="form-grid">
-        <div><label id="lblKerf">سمك المنشار (سلاح القص)</label><input id="kerf" type="number" value="3.2" min="0" step="any"></div>
-        <div><label id="lblTrim">هوامش التنظيف (Trim)</label><input id="trim" type="number" value="5" min="0" step="any"></div>
+        <div><label id="lblKerf">سمك المنشار (سلاح القص)</label><input id="kerf" type="number" autocomplete="off" placeholder="3.2" min="0" step="any"></div>
+        <div><label id="lblTrim">هوامش التنظيف (Trim)</label><input id="trim" type="number" autocomplete="off" placeholder="5" min="0" step="any"></div>
       </div>
 
       <div class="options-bar">
@@ -232,20 +251,21 @@ canvas { max-width: 100%; height: auto; display: inline-block; box-shadow: 0 2px
       <div class="metric-box"><b id="statCuts">0</b><span id="lblStatCuts">طول القص</span></div>
     </div>
 
-    <!-- مخرجات الشيتات -->
+    <div id="emptyState" class="empty"><b>📐</b><span>لا توجد نتائج بعد</span><br><small>أدخل مقاس الشيت والقطعيات وسيظهر الرسم هنا تلقائياً</small></div>
     <div id="sheetsOutput"></div>
   </div>
 </main>
 
+<nav class="tabbar no-print">
+  <button class="on" id="tabIn" type="button"><span class="ic">📝</span><span>المدخلات</span></button>
+  <button id="tabOut" type="button"><span class="ic">📐</span><span>النتائج</span></button>
+  <button class="act" id="tabRun" type="button"><span class="ic">⚡</span><span>احسب</span></button>
+  <button class="del" id="tabClear" type="button"><span class="ic">🗑️</span><span>مسح الكل</span></button>
+</nav>
 <script>
 const PALETTE = ['#2a9d8f','#e76f51','#f4a261','#457b9d','#9b5de5','#00bbf9','#06d6a0','#ff006e','#118ab2'];
-let rows = [
-  { label: 'باب خزانة', qty: 4, l: 720, w: 450, canRotate: false },
-  { label: 'جوانب', qty: 2, l: 850, w: 560, canRotate: false },
-  { label: 'قاعدة وسقف', qty: 2, l: 900, w: 560, canRotate: true },
-  { label: 'أرفف داخلية', qty: 3, l: 864, w: 530, canRotate: true },
-  { label: 'درج أمامي', qty: 4, l: 446, w: 176, canRotate: true }
-];
+let rows = [];
+const newRow = () => ({ label: '', qty: 1, l: 0, w: 0, canRotate: true });
 
 let isArabic = true, curUnit = "mm";
 const UF = { mm: 1, cm: 10, in: 25.4 };
@@ -321,7 +341,7 @@ function optimize(items, W, H, k, rot) {
   return best || [];
 }
 
-const EN = {'تقطيع الشيتات · CutOptimizer':'CutOptimizer 2D','مقاس الشيت (اللوح الخام)':'Stock Sheet Dimensions','الطول (L)':'Length (L)','العرض (W)':'Width (W)','سمك المنشار (سلاح القص)':'Blade Kerf','هوامش التنظيف (Trim)':'Trim Margin','السماح بتدوير القطع':'Allow Piece Rotation','القطعيات المطلوبة':'Cut List','+ إضافة مقاس جديد':'+ Add Part','⚡ احسب وارسم الشيت':'⚡ Calculate & Nest','مم (mm)':'mm','سم (cm)':'cm','بوصة (in)':'inch','صاج 2000×1000':'Metal 2000×1000','صاج 3000×1500':'Metal 3000×1500','الاسم':'Name','العدد':'Qty','الطول':'Length','العرض':'Width','تدوير':'Rotate','حذف':'Del','🖨️ طباعة':'🖨️ Print','+ نموذج مطبخ':'+ Kitchen sample','عدد الشيتات':'Sheets','نسبة الاستغلال':'Yield','نسبة الهدر':'Waste','طول القص':'Cut length'};
+const EN = {'تقطيع الشيتات · CutOptimizer':'CutOptimizer 2D','مقاس الشيت (اللوح الخام)':'Stock Sheet Dimensions','الطول (L)':'Length (L)','العرض (W)':'Width (W)','سمك المنشار (سلاح القص)':'Blade Kerf','هوامش التنظيف (Trim)':'Trim Margin','السماح بتدوير القطع':'Allow Piece Rotation','القطعيات المطلوبة':'Cut List','+ إضافة مقاس جديد':'+ Add Part','⚡ احسب وارسم الشيت':'⚡ Calculate & Nest','مم (mm)':'mm','سم (cm)':'cm','بوصة (in)':'inch','صاج 2000×1000':'Metal 2000×1000','صاج 3000×1500':'Metal 3000×1500','الاسم':'Name','العدد':'Qty','الطول':'Length','العرض':'Width','تدوير':'Rotate','حذف':'Del','🖨️ طباعة':'🖨️ Print','+ نموذج مطبخ':'+ Kitchen sample','عدد الشيتات':'Sheets','نسبة الاستغلال':'Yield','نسبة الهدر':'Waste','طول القص':'Cut length','المدخلات':'Input','النتائج':'Results','احسب':'Calculate','مسح الكل':'Clear all','🗑️ مسح الكل':'🗑️ Clear all','لا توجد نتائج بعد':'No results yet','أدخل مقاس الشيت والقطعيات وسيظهر الرسم هنا تلقائياً':'Enter the sheet size and parts to see the layout here'};
 function applyLang() {
   document.querySelectorAll("body *").forEach(el => {
     if (el.children.length) return;
@@ -404,6 +424,7 @@ function drawSheetCanvas(bin, W, H, trim, k, unit) {
 function renderRows() {
   const container = document.getElementById("rowsContainer");
   container.innerHTML = "";
+  if (!rows.length) { container.innerHTML = `<div class="empty-hint">${isArabic ? 'لا توجد قطع. اضغط "+ إضافة مقاس جديد".' : 'No parts yet. Tap "+ Add Part".'}</div>`; return; }
   rows.forEach((r, idx) => {
     const el = document.createElement("div");
     el.className = "cutlist-row";
@@ -412,7 +433,7 @@ function renderRows() {
       <input type="number" value="${r.qty}" min="1" oninput="rows[${idx}].qty=Math.max(1,parseInt(this.value)||1)">
       <input type="number" value="${r.l}" min="1" step="any" oninput="rows[${idx}].l=parseFloat(this.value)||0">
       <input type="number" value="${r.w}" min="1" step="any" oninput="rows[${idx}].w=parseFloat(this.value)||0">
-      <button class="btn-canRotate ${r.canRotate?'':'locked'}" type="button" title="${r.canRotate?(isArabic?'تدوير حر':'Free rotate'):(isArabic?'ثابت الاتجاه':'Fixed')}" onclick="rows[${idx}].canRotate=!rows[${idx}].canRotate;renderRows()">${r.canRotate?'🔄':'🔒'}</button>
+      <button class="btn-canRotate ${r.canRotate?'':'locked'}" type="button" title="${r.canRotate?(isArabic?'تدوير حر':'Free rotate'):(isArabic?'ثابت الاتجاه':'Fixed')}" onclick="rows[${idx}].canRotate=!rows[${idx}].canRotate;renderRows();autoCalc()">${r.canRotate?'🔄':'🔒'}</button>
       <button class="btn-del" type="button" onclick="deleteRow(${idx})">✕</button>
     `;
     container.appendChild(el);
@@ -420,19 +441,21 @@ function renderRows() {
 }
 
 function addRow() {
-  rows.push({ label: `${isArabic ? "قطعة" : "Part"} ${rows.length + 1}`, qty: 1, l: 0, w: 0, canRotate: true });
+  rows.push({ ...newRow(), label: `${isArabic ? "قطعة" : "Part"} ${rows.length + 1}` });
   renderRows();
+  const f = document.querySelector('#rowsContainer .cutlist-row:last-child input:nth-child(3)'); if (f) f.focus();
 }
 
 function deleteRow(idx) {
-  if (rows.length > 1) rows.splice(idx, 1);
-  else rows = [{ label: 'قطعة 1', qty: 1, l: 0, w: 0, canRotate: true }];
+  rows.splice(idx, 1);
   renderRows();
+  autoCalc();
 }
 
 function setSheet(w, h) {
   document.getElementById("sheetW").value = fmt(w / UF[curUnit]);
   document.getElementById("sheetH").value = fmt(h / UF[curUnit]);
+  autoCalc();
 }
 
 function loadSample(type) {
@@ -451,7 +474,7 @@ function loadSample(type) {
   }
 }
 
-function calculate() {
+function calculate(manual) {
   const err = document.getElementById("errorBox");
   err.style.display = "none";
   const num = id => parseFloat(document.getElementById(id).value) || 0;
@@ -462,7 +485,9 @@ function calculate() {
 
   if (W <= 0 || H <= 0) {
     err.textContent = isArabic ? "يرجى كتابة مقاسات اللوح الخام." : "Enter sheet dimensions.";
-    err.style.display = "block"; return;
+    clearResults();
+    if (manual) err.style.display = "block";
+    return;
   }
 
   const usableW = Math.max(0, W - trim * 2);
@@ -490,8 +515,9 @@ function calculate() {
     err.style.display = "block";
   }
   if (!flatItems.length) {
-    err.textContent = isArabic ? "أضف قطعة واحدة على الأقل بأبعاد صحيحة." : "Add at least one part.";
-    err.style.display = "block"; return;
+    clearResults();
+    if (manual && !tooBig.length) { err.textContent = isArabic ? "أضف قطعة واحدة على الأقل بأبعاد صحيحة." : "Add at least one part."; err.style.display = "block"; }
+    return;
   }
 
   const bins = optimize(flatItems, usableW, usableH, k, allowRot);
@@ -526,6 +552,7 @@ function calculate() {
   });
 
   document.getElementById("statsGrid").style.display = "grid";
+  document.getElementById("emptyState").style.display = "none";
   document.getElementById("statSheets").textContent = bins.length;
   const overallYield = bins.length > 0 ? (totalUsed / (bins.length * W * H)) * 100 : 0;
   document.getElementById("statYield").textContent = overallYield.toFixed(1) + "%";
@@ -533,6 +560,7 @@ function calculate() {
 
   const cutMeters = unit === 'mm' ? (totalCutLen / 1000).toFixed(1) : unit === 'cm' ? (totalCutLen / 100).toFixed(1) : (totalCutLen * 0.0254).toFixed(1);
   document.getElementById("statCuts").textContent = cutMeters + (isArabic ? ' م' : ' m');
+  if (manual === true) setTab('out');
 }
 
 function downloadCanvas(btn) {
@@ -558,7 +586,7 @@ document.getElementById("btnTheme").onclick = () => {
 };
 
 document.getElementById("btnAddRow").onclick = addRow;
-document.getElementById("btnRun").onclick = calculate;
+document.getElementById("btnRun").onclick = () => calculate(true);
 
 document.getElementById("unitSel").onchange = function () {
   const f = UF[curUnit] / UF[this.value];
@@ -568,8 +596,34 @@ document.getElementById("unitSel").onchange = function () {
   renderRows(); calculate();
 };
 
-renderRows();
-calculate();
+function clearResults() {
+  document.getElementById("sheetsOutput").innerHTML = "";
+  document.getElementById("statsGrid").style.display = "none";
+  document.getElementById("emptyState").style.display = "";
+}
+let _t;
+function autoCalc() { clearTimeout(_t); _t = setTimeout(() => calculate(false), 350); }
+function setTab(t) {
+  document.body.dataset.tab = t;
+  document.getElementById("tabIn").classList.toggle("on", t === "in");
+  document.getElementById("tabOut").classList.toggle("on", t === "out");
+  window.scrollTo(0, 0);
+}
+function resetAll() {
+  if (!confirm(isArabic ? "مسح كل البيانات وبدء مشروع جديد؟" : "Clear all data and start a new project?")) return;
+  rows = [];
+  ["sheetW", "sheetH", "kerf", "trim"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("rotGlobal").checked = true;
+  document.getElementById("errorBox").style.display = "none";
+  renderRows(); clearResults(); setTab("in");
+}
+document.addEventListener("input", e => { if (e.target.closest(".left-col")) autoCalc(); });
+document.getElementById("btnClear").onclick = document.getElementById("tabClear").onclick = resetAll;
+document.getElementById("tabRun").onclick = () => calculate(true);
+document.getElementById("tabIn").onclick = () => setTab("in");
+document.getElementById("tabOut").onclick = () => setTab("out");
+
+renderRows(); clearResults(); setTab("in");
 if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{})); }
 </script>
 </body>
